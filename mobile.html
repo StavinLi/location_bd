@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        
+        li {
+            list-style: none;
+            margin-top: 20px;
+        }
+        
+        li>label {
+            line-height: 30px;
+            display: inline-block;
+            font-size: 14px;
+            min-width: 100px;
+            text-align: right;
+            vertical-align: middle;
+        }
+        
+        li.double>select {
+            width: 117px;
+        }
+        
+        li>input,
+        li>select {
+            width: 160px;
+            border-radius: 3px;
+            background: #fff;
+            border: 1px solid #e1e1e1;
+            height: 30px;
+            color: #333;
+            font-size: 12px;
+            display: inline-block;
+            text-indent: 5px;
+        }
+        
+        button {
+            padding: 0 10px;
+            height: 30px;
+            color: #fff;
+            background-color: #46a6fe;
+            border: 1px solid #46a6fe;
+            border-radius: 4px;
+        }
+        
+        #map {
+            width: 640px;
+            height: 360px;
+            border-radius: 3px;
+            border: 1px solid #e3e3e3;
+            margin-left: 105px;
+        }
+    </style>
+</head>
+
+<body>
+    <ul>
+        <li class="double"><label>区域：</label>
+            <select id="province" onchange="changeSelect(this);">
+                <option value="">请选择</option>
+            </select>
+            <select id="city" onchange="changeSelect(this);">
+                <option value="">请选择</option>
+            </select>
+            <select id="district">
+                <option value="">请选择</option>
+            </select>
+        </li>
+        <li>
+            <label>详情地址：</label>
+            <input type="text" placeholder="请输入详细地址，如街道名称、门牌号码" id="detailsAddress" style="width:240px;">
+            <input type="text" placeholder="定位后显示经纬度" id="longitudeLatitude" style="width: 135px" readonly>
+            <button>定位到地图上</button>
+        </li>
+        <li id="map">
+
+        </li>
+    </ul>
+</body>
+<script src="city.js"></script>
+<script type="text/javascript" src="http://s.yidaichu.com/s/libs/js/jquery.js"></script>
+<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=yZSTYLk9UUvs0ZqXqBbtTp8ViKk5vxLM"></script>
+<script>
+    var map = new BMap.Map("map", {
+        enableMapClick: false
+    });
+    map.centerAndZoom("北京市", 11);
+    map.enableScrollWheelZoom(true);
+    var myGeo = new BMap.Geocoder();
+    // 将地址解析结果显示在地图上,并调整地图视野
+
+    map.addEventListener("click", function(e) {
+        map.clearOverlays();
+        var pt = e.point;
+        map.addOverlay(new BMap.Marker(pt));
+        $("#longitudeLatitude").val(pt.lng + ',' + pt.lat);
+    });
+    $("#province").on("change", function() {
+        if ($("#province :selected").text()) {
+            map.centerAndZoom($("#province :selected").text(), 8);
+        }
+    });
+    $("#city").on("change", function() {
+        if ($("#city :selected").text()) {
+            map.centerAndZoom($("#city :selected").text(), 11);
+        }
+    });
+    $("#district").on("change", function() {
+        if ($("#district :selected").text()) {
+            myGeo.getPoint($("#city :selected").text() + $("#district :selected").text(), function(point) {
+                if (point) {
+                    map.clearOverlays();
+                    map.centerAndZoom(point, 12);
+                    map.addOverlay(new BMap.Marker(point));
+                    $("#longitudeLatitude").val(point.lng + ',' + point.lat)
+                } else {
+                    alert("无法解析地址,请完善详细地址信息或者手动点击地图选择");
+                }
+            }, $("#province").val());
+        }
+    });
+    $("button").on('click', function() {
+        if (!$("#province").val() || !$("#city").val() || !$("#district").val()) {
+            return alert("请选择区域");
+        }
+        if (!$("#detailsAddress").val()) {
+            return alert("输入详细地址后定位");
+        }
+        map.clearOverlays(); //清除地图上所有覆盖物
+        function myFun() {
+            if (local.getResults().getPoi(0)) {
+                var pp = local.getResults().getPoi(0).point; //获取第一个智能搜索的结果
+                map.centerAndZoom(pp, 18);
+                map.addOverlay(new BMap.Marker(pp)); //添加标注
+                $("#longitudeLatitude").val(pp.lng + ',' + pp.lat)
+            } else {
+                alert("无法解析地址,请完善详细地址信息或者手动点击地图选择");
+            }
+        }
+        var local = new BMap.LocalSearch(map, { //智能搜索
+            onSearchComplete: myFun
+        });
+        local.search($("#city :selected").text() + $("#district :selected").text() + $("#detailsAddress").val());
+    });
+    //联想输入框
+    // function setPlace() {
+    //     map.clearOverlays(); //清除地图上所有覆盖物
+    //     function myFun() {
+    //         var pp = local.getResults().getPoi(0).point; //获取第一个智能搜索的结果
+    //         map.centerAndZoom(pp, 18);
+    //         map.addOverlay(new BMap.Marker(pp)); //添加标注
+    //     }
+    //     var local = new BMap.LocalSearch(map, { //智能搜索
+    //         onSearchComplete: myFun
+    //     });
+    //     local.search($("#city :selected").text() + $("#district :selected").text() + myValue);
+    // }
+    // // 百度地图API功能
+    // function G(id) {
+    //     return document.getElementById(id);
+    // }
+    // var ac = new BMap.Autocomplete( //建立一个自动完成的对象
+    //     {
+    //         "input": "detailsAddress",
+    //         "location": map
+    //     });
+
+    // ac.addEventListener("onhighlight", function(e) { //鼠标放在下拉列表上的事件
+    //     var str = "";
+    //     var _value = e.fromitem.value;
+    //     var value = "";
+    //     if (e.fromitem.index > -1) {
+    //         value = _value.province + _value.city + _value.district + _value.street + _value.business;
+    //     }
+    //     str = "FromItem<br />index = " + e.fromitem.index + "<br />value = " + value;
+
+    //     value = "";
+    //     if (e.toitem.index > -1) {
+    //         _value = e.toitem.value;
+    //         value = _value.province + _value.city + _value.district + _value.street + _value.business;
+    //     }
+    //     str += "<br />ToItem<br />index = " + e.toitem.index + "<br />value = " + value;
+    //     G("searchResultPanel").innerHTML = str;
+    // });
+
+    // var myValue;
+    // ac.addEventListener("onconfirm", function(e) { //鼠标点击下拉列表后的事件
+    //     var _value = e.item.value;
+    //     myValue = _value.province + _value.city + _value.district + _value.street + _value.business;
+    //     G("searchResultPanel").innerHTML = "onconfirm<br />index = " + e.item.index + "<br />myValue = " + myValue;
+
+    //     setPlace();
+    // });
+</script>
+
+</html>
